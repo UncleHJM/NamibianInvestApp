@@ -1,0 +1,155 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Namibian Invest App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Mock market data
+    const mockMarketData = {
+      nsx: [{ symbol: "ANG", name: "Anglo American", price: 653.59 }],
+      jse: [{ symbol: "MTN", name: "MTN Group", price: 120.45 }],
+      international: [{ symbol: "AAPL", name: "Apple Inc.", price: 145.32 }],
+      crypto: [{ symbol: "BTC", name: "Bitcoin", price: 45000 }],
+      annuities: [{ name: "Standard Annuity", rate: "5% p.a." }],
+      property: [{ name: "Windhoek Property Fund", value: 1000000 }],
+    };
+
+    // Mock KYC verification function
+    const verifyKYC = async (userData) => {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ status: "verified", message: "KYC completed" }), 1000);
+      });
+    };
+
+    // Mock tax calculation (10% non-resident shareholder tax)
+    const calculateTax = (amount, isNonResident) => {
+      return isNonResident ? amount * 0.1 : 0;
+    };
+
+    const App = () => {
+      const [activeTab, setActiveTab] = useState("nsx");
+      const [user, setUser] = useState(null);
+      const [kycStatus, setKycStatus] = useState("pending");
+      const [portfolio, setPortfolio] = useState([]);
+
+      // Mock user login
+      const login = () => {
+        setUser({ name: "John Doe", isNonResident: true });
+        verifyKYC({ name: "John Doe", id: "123456" }).then((result) => {
+          setKycStatus(result.status);
+        });
+      };
+
+      // Mock buy function
+      const buyAsset = (asset) => {
+        const tax = calculateTax(asset.price, user?.isNonResident);
+        setPortfolio([...portfolio, { ...asset, tax }]);
+      };
+
+      return (
+        <div className="container mx-auto p-4">
+          <h1 className="text-3xl font-bold mb-4">Namibian Invest App</h1>
+          {!user ? (
+            <button className="bg-blue-500 text-white p-2 rounded" onClick={login}>
+              Login
+            </button>
+          ) : (
+            <>
+              <p className="mb-2">Welcome, {user.name}! KYC Status: {kycStatus}</p>
+              <div className="flex mb-4">
+                {["nsx", "jse", "international", "crypto", "annuities", "property"].map((tab) => (
+                  <button
+                    key={tab}
+                    className={`p-2 mr-2 ${activeTab === tab ? "bg-blue-500 text-white" : "bg-gray-200"} rounded`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">{activeTab.toUpperCase()} Assets</h2>
+                <ul>
+                  {mockMarketData[activeTab].map((asset, index) => (
+                    <li key={index} className="mb-2">
+                      {asset.name} - {asset.price || asset.rate || asset.value}
+                      <button
+                        className="ml-2 bg-green-500 text-white p-1 rounded"
+                        onClick={() => buyAsset(asset)}
+                        disabled={kycStatus !== "verified"}
+                      >
+                        Buy
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-4">
+                <h2 className="text-2xl font-bold mb-2">Portfolio</h2>
+                <ul>
+                  {portfolio.map((asset, index) => (
+                    <li key={index}>
+                      {asset.name} - {asset.price || asset.rate || asset.value} (Tax: {asset.tax})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
