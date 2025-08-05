@@ -1,0 +1,26 @@
+NamibianInvestApp/
+├── web/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── schema.ts
+│   ├── public/
+│   │   ├── index.html
+│   ├── package.json
+├── mobile/
+│   ├── App.js
+│   ├── schema.ts
+│   ├── package.json
+├── backend/
+│   ├── server.ts
+│   ├── schema.ts
+│   ├── storage.ts
+│   ├── package.json
+├── tests/
+│   ├── web/
+│   │   ├── App.test.js
+│   ├── mobile/
+│   │   ├── App.test.js
+├── .github/
+│   ├── workflows/
+│   │   ├── deploy.yml
+├── README.md
